@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:agora_rtc_engine/rtc_engine.dart';
 import 'package:agora_rtc_engine/rtc_local_view.dart' as rtc_local_view;
 import 'package:agora_rtc_engine/rtc_remote_view.dart' as rtc_remote_view;
 import '../utils/settings.dart';
+import 'package:http/http.dart' as http;
 
 class CallPage extends StatefulWidget {
   final String? channelName;
@@ -36,6 +38,21 @@ class _CallPageState extends State<CallPage> {
     super.dispose();
   }
 
+   getRtcToken(String channel) async {
+    final url = 'https://agora-token-generator-online.herokuapp.com/rtc/'+channel+'/publisher/uid/0';
+
+    try {
+      //arreglar esto
+      final response = await http.get(Uri.parse(url));
+      final token = jsonDecode(response.body);
+      return token['rtcToken'];
+    }catch (e){
+      print('error');
+      print(e);
+      return '';
+    }
+  }
+
   Future<void> initialize() async {
     if (APP_ID.isEmpty) {
       setState(() {
@@ -57,8 +74,9 @@ class _CallPageState extends State<CallPage> {
     VideoEncoderConfiguration configuration = VideoEncoderConfiguration();
     configuration.dimensions = VideoDimensions(width: 1920, height: 1080);
     await _engine.setVideoEncoderConfiguration(configuration);
-    //aqui es donde especifico user id y username
-    await _engine.joinChannel(TOKEN, widget.channelName!, null, 0);
+
+    final tkn = await getRtcToken(widget.channelName!);
+    await _engine.joinChannel(tkn, widget.channelName!, null, 0);
   }
     void _addAgoraEventHandlers() {
       _engine.setEventHandler(RtcEngineEventHandler(error: (code) {
